@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: comet-postgres-dev
+    environment:
+      POSTGRES_USER: comet
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: comet
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./comet:/var/lib/postgresql/data
+    networks:
+      - comet-network
+
+networks:
+  comet-network:
