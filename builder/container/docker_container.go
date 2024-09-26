@@ -55,7 +55,7 @@ func (c *DockerBuildContainer) Create() (*DockerBuildContainer, error) {
 
 // BuildContainer interface functions
 
-func (c *DockerBuildContainer) CopyToContainer(content io.Reader, containerPath string) error {
+func (c *DockerBuildContainer) CopyToContainer(content *bytes.Buffer, containerPath string) error {
 	ctx := context.Background()
 	if err := c.client.CopyToContainer(ctx, c.id, "/", content, types.CopyToContainerOptions{}); err != nil {
 		return err
@@ -63,8 +63,8 @@ func (c *DockerBuildContainer) CopyToContainer(content io.Reader, containerPath 
 	return nil
 }
 
-func (c *DockerBuildContainer) CopyFromContainer() (io.ReadCloser, error) {
-	distData, _, err := c.client.CopyFromContainer(context.Background(), c.id, "/dist/")
+func (c *DockerBuildContainer) CopyFromContainer(containerPath string) (io.ReadCloser, error) {
+	distData, _, err := c.client.CopyFromContainer(context.Background(), c.id, containerPath)
 	if err != nil {
 		return nil, err
 	}

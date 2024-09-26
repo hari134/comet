@@ -20,7 +20,10 @@ func (sm *StreamManager) SendStream(ctx context.Context, dataChan <- chan Stream
 	correlationID := ctx.Value("correlationID").(transport.CorrelationID)
 
 	for data := range dataChan{
-		err := sm.Sender.Send(correlationID,data)
+		payload := transport.NewPayload()
+		payload.SetData("data",data.Data)
+		event := transport.NewEvent("builder.stream",correlationID,payload)
+		err := sm.Sender.Send(event)
 		if err != nil{
 			log.Printf("Failed to send stream with correlationID : %s",correlationID.ToString())
 		}

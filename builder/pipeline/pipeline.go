@@ -1,45 +1,49 @@
 package pipeline
 
-import (
-	"github.com/hari134/comet/builder/container"
-)
-/*
-	The pipeline interface defines function signatures for a build pipeline.
-	The build pipeline will utilize a single container instance for all the stages.
-	In the future the pipeline should be extended to allow multiple container across stages.
-*/
-type Pipeline interface{
-	Run() error
-	AddStage(stage Stage)
+// Pipeline interface defines function signatures for a build pipeline.
+// The build pipeline will take a container instance to execute for all stages.
+type Pipeline interface {
+	Run(ctx *PipelineContext) error
+	AddStage(stage Stage) Pipeline
 }
 
-
-type SerialPipeline struct{
-	container container.BuildContainer
+type SerialPipeline struct {
 	stages []Stage
 }
 
-func NewSerialPipeline(buildContainer container.BuildContainer) *SerialPipeline{
+// NewSerialPipeline creates a new SerialPipeline instance.
+func NewSerialPipeline() Pipeline {
 	return &SerialPipeline{
-		buildContainer,
-		[]Stage{},
+		stages: []Stage{},
 	}
 }
 
-func (pipeline *SerialPipeline) AddStage(stage Stage){
-	pipeline.stages = append(pipeline.stages,stage)
+// AddStage adds a stage to the serial pipeline and returns the pipeline for chaining.
+func (pipeline *SerialPipeline) AddStage(stage Stage) Pipeline{
+	pipeline.stages = append(pipeline.stages, stage)
+	return pipeline
 }
 
-func (pipeline *SerialPipeline) Run() error{
-	for _, stage := range pipeline.stages{
-		_,err := stage.Execute(pipeline.container)
-		if err != nil{
+// Run executes all stages in sequence. If a stage fails, the execution stops.
+func (pipeline *SerialPipeline) Run(ctx *PipelineContext) error {
+	for _, stage := range pipeline.stages {
+		if err := stage.Execute(ctx); err != nil {
 			return err
 		}
 	}
-	pipeline.container.Stop()
-	if err := pipeline.container.Remove(); err != nil{
+
+	// Cleanup the container after all stages are executed
+	container, err := ctx.GetContainer()
+	if err != nil{
 		return err
 	}
+
+	if err := container.Stop(); err != nil {
+		return err
+	}
+	if err := container.Remove(); err != nil {
+		return err
+	}
+
 	return nil
 }

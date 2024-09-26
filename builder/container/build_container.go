@@ -20,7 +20,7 @@ type BuildContainer interface {
 	CopyToContainer(tarFile *bytes.Buffer, containerPath string) error
 	CopyFromContainer(containerPath string) (io.ReadCloser, error)
 	Start() error
-	Stop()
+	Stop() error
 	Remove() error
 	ExecCmd(cmd string) (string, error)
 }
