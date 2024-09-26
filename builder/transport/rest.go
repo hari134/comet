@@ -47,7 +47,7 @@ type RestReceiver struct {
 }
 
 // StartReceiving listens for incoming events on the specified endpoint and executes the provided handler.
-func (r *RestReceiver) StartReceiving(handler func(event Event) error) error {
+func (r *RestReceiver) StartReceiving(eventHandler EventHandler,event Event) error {
 	if r.Endpoint == "" {
 		return NewTransportError("no endpoint provided for receiving events", nil)
 	}
@@ -71,7 +71,7 @@ func (r *RestReceiver) StartReceiving(handler func(event Event) error) error {
 			return
 		}
 
-		if err := handler(event); err != nil {
+		if err := eventHandler.HandleEvent(event); err != nil {
 			http.Error(w, "Failed to process event", http.StatusInternalServerError)
 			return
 		}
@@ -100,15 +100,15 @@ func (r *RestReceiver) StopReceiving() error {
 	return nil
 }
 
-type RestHandler struct {
+type RestReceiverEventHandler struct {
 	containerManager container.ContainerManager
 }
 
-func NewRestHandler(containerManager container.ContainerManager) *RestHandler {
-	return &RestHandler{containerManager}
+func NewRestReceiverEventHandler(containerManager container.ContainerManager) *RestReceiverEventHandler {
+	return &RestReceiverEventHandler{containerManager}
 }
 
-func (rh *RestHandler) HandleEvent(event Event) error {
+func (rh *RestReceiverEventHandler) HandleEvent(event Event) error {
 	correlationId := event.CorrelationID
 	payload := event.Payload
 	eventType := event.Type
@@ -119,17 +119,20 @@ func (rh *RestHandler) HandleEvent(event Event) error {
 		if err != nil {
 			return err
 		}
+
 		buildPipeline, err := pipelines.PipelineFactory(buildType.(string))
 		if err != nil {
 			return err
 		}
+
 		buildContainer, err := rh.containerManager.NewBuildContainer(buildType.(string))
 		if err != nil {
 			return err
 		}
-		ctx := pipeline.NewPipelineContext().
-			WithContainer(buildContainer)
+
+		ctx := pipeline.NewPipelineContext().WithContainer(buildContainer)
 		ctx.Set("correlationId", correlationId)
+
 		err = buildPipeline.Run(ctx)
 		if err != nil {
 			return err
