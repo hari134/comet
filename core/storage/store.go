@@ -1,7 +1,9 @@
 package storage
 
+import "context"
+
 
 type Store interface{
-	Get(key string) ([]byte,error)
-	Put(fileData []byte, key string) error
+	Get(ctx context.Context,key string) ([]byte,error)
+	Put(ctx context.Context,fileData []byte, key string) error
 }

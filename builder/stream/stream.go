@@ -2,7 +2,7 @@ package stream
 
 
 import (
-	"github.com/hari134/comet/builder/transport"
+	"github.com/hari134/comet/core/transport"
 )
 
 type Stream struct {

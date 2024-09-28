@@ -2,12 +2,13 @@ package storage
 
 import (
 	"bytes"
+	"context"
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 type AWSCredentials struct {
@@ -22,7 +23,7 @@ type S3Store struct {
 	bucket string
 }
 
-func (s3Store S3Store) Get(key string) ([]byte, error) {
+func (s3Store S3Store) Get(ctx context.Context,key string) ([]byte, error) {
 	resp, err := s3Store.client.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(s3Store.bucket),
 		Key:    aws.String(key),
@@ -38,7 +39,7 @@ func (s3Store S3Store) Get(key string) ([]byte, error) {
 	return bytes, nil
 }
 
-func (s3Store S3Store) Put(fileData []byte, key string) error {
+func (s3Store S3Store) Put(ctx context.Context,fileData []byte, key string) error {
 	_, err := s3Store.client.PutObject(&s3.PutObjectInput{
 		Bucket: aws.String(s3Store.bucket),
 		Key:    aws.String(key),
@@ -51,7 +52,7 @@ func (s3Store S3Store) Put(fileData []byte, key string) error {
 }
 
 func NewS3Store(awsConfig AWSCredentials) (*S3Store, error) {
-	sess, err := NewAwsSession(awsConfig)
+	sess, err := newAwsSession(awsConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +61,7 @@ func NewS3Store(awsConfig AWSCredentials) (*S3Store, error) {
 	return s3Store, nil
 }
 
-func NewAwsSession(config AWSCredentials) (*session.Session, error) {
+func newAwsSession(config AWSCredentials) (*session.Session, error) {
 	awsRegion := config.Region
 	accessKey := config.AccessKey
 	secretKey := config.SecretAccessKey

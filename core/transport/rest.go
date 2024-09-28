@@ -11,6 +11,7 @@ import (
 	"github.com/hari134/comet/builder/container"
 	"github.com/hari134/comet/builder/pipeline"
 	"github.com/hari134/comet/builder/pipeline/pipelines"
+	"github.com/hari134/comet/core/storage"
 )
 
 // RestSender implements the Sender interface, allowing events to be sent via REST.
@@ -44,6 +45,15 @@ func (r *RestSender) Send(event Event) error {
 type RestReceiver struct {
 	Endpoint string       // REST endpoint where this service listens for incoming events
 	server   *http.Server // HTTP server for handling incoming requests
+}
+
+func NewRestReceiver() *RestReceiver{
+	return &RestReceiver{}
+}
+
+func (r *RestReceiver) WithEndpoint(endpoint string) *RestReceiver{
+	r.Endpoint = endpoint
+	return r
 }
 
 // StartReceiving listens for incoming events on the specified endpoint and executes the provided handler.
@@ -102,10 +112,21 @@ func (r *RestReceiver) StopReceiving() error {
 
 type RestReceiverEventHandler struct {
 	containerManager container.ContainerManager
+	store storage.Store
 }
 
-func NewRestReceiverEventHandler(containerManager container.ContainerManager) *RestReceiverEventHandler {
-	return &RestReceiverEventHandler{containerManager}
+func NewRestReceiverEventHandler() *RestReceiverEventHandler {
+	return &RestReceiverEventHandler{}
+}
+
+func (restReceiverEH *RestReceiverEventHandler) WithContainerManager(containerManager container.ContainerManager) *RestReceiverEventHandler{
+	restReceiverEH.containerManager = containerManager
+	return restReceiverEH
+}
+
+func (restReceiverEH *RestReceiverEventHandler) WithStorage(store storage.Store) *RestReceiverEventHandler{
+	restReceiverEH.store = store
+	return restReceiverEH
 }
 
 func (rh *RestReceiverEventHandler) HandleEvent(event Event) error {

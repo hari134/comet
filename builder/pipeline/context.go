@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/hari134/comet/builder/container"
+	"github.com/hari134/comet/core/storage"
 )
 
 // PipelineContext holds shared data for stages
@@ -13,6 +14,7 @@ import (
 type PipelineContext struct {
 	container      container.BuildContainer
 	projectTarFile *bytes.Buffer
+	store 					storage.Store
 	data           map[string]interface{}
 }
 
@@ -25,6 +27,12 @@ func NewPipelineContext() *PipelineContext {
 
 func (pipeline *PipelineContext) WithContainer(buildContainer container.BuildContainer) *PipelineContext {
 	pipeline.container = buildContainer
+	return pipeline
+}
+
+
+func (pipeline *PipelineContext) WithStore(store storage.Store) *PipelineContext {
+	pipeline.store= store
 	return pipeline
 }
 
