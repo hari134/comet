@@ -12,6 +12,7 @@ import (
 	"github.com/hari134/comet/builder/pipeline"
 	"github.com/hari134/comet/builder/pipeline/pipelines"
 	"github.com/hari134/comet/core/storage"
+	"github.com/hari134/comet/core/transport"
 )
 
 // RestSender implements the Sender interface, allowing events to be sent via REST.
@@ -20,22 +21,22 @@ type RestSender struct {
 }
 
 // Send sends an event via an HTTP POST request to the specified REST endpoint.
-func (r *RestSender) Send(event Event) error {
+func (r *RestSender) Send(event transport.Event) error {
 	// Serialize the event into JSON
 	eventJSON, err := json.Marshal(event)
 	if err != nil {
-		return NewTransportError("failed to marshal event", err)
+		return transport.NewTransportError("failed to marshal event", err)
 	}
 
 	resp, err := http.Post(r.Endpoint, "application/json", bytes.NewBuffer(eventJSON))
 	if err != nil {
-		return NewTransportError("failed to send event", err)
+		return transport.NewTransportError("failed to send event", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return NewTransportError(fmt.Sprintf("failed to send event, status code: %d", resp.StatusCode), errors.New(string(body)))
+		return transport.NewTransportError(fmt.Sprintf("failed to send event, status code: %d", resp.StatusCode), errors.New(string(body)))
 	}
 
 	return nil
@@ -57,9 +58,9 @@ func (r *RestReceiver) WithEndpoint(endpoint string) *RestReceiver{
 }
 
 // StartReceiving listens for incoming events on the specified endpoint and executes the provided handler.
-func (r *RestReceiver) StartReceiving(eventHandler EventHandler,event Event) error {
+func (r *RestReceiver) StartReceiving(eventHandler transport.EventHandler,event transport.Event) error {
 	if r.Endpoint == "" {
-		return NewTransportError("no endpoint provided for receiving events", nil)
+		return transport.NewTransportError("no endpoint provided for receiving events", nil)
 	}
 
 	http.HandleFunc(r.Endpoint, func(w http.ResponseWriter, req *http.Request) {
@@ -75,7 +76,7 @@ func (r *RestReceiver) StartReceiving(eventHandler EventHandler,event Event) err
 			return
 		}
 
-		var event Event
+		var event transport.Event
 		if err := json.Unmarshal(body, &event); err != nil {
 			http.Error(w, "Failed to unmarshal event", http.StatusBadRequest)
 			return
@@ -93,7 +94,7 @@ func (r *RestReceiver) StartReceiving(eventHandler EventHandler,event Event) err
 	r.server = &http.Server{Addr: r.Endpoint}
 	err := r.server.ListenAndServe()
 	if err != nil {
-		return NewTransportError("failed to start REST receiver", err)
+		return transport.NewTransportError("failed to start REST receiver", err)
 	}
 
 	return nil
@@ -104,7 +105,7 @@ func (r *RestReceiver) StopReceiving() error {
 	if r.server != nil {
 		err := r.server.Close()
 		if err != nil {
-			return NewTransportError("failed to stop REST receiver", err)
+			return transport.NewTransportError("failed to stop REST receiver", err)
 		}
 	}
 	return nil
@@ -129,14 +130,14 @@ func (restReceiverEH *RestReceiverEventHandler) WithStorage(store storage.Store)
 	return restReceiverEH
 }
 
-func (rh *RestReceiverEventHandler) HandleEvent(event Event) error {
+func (rh *RestReceiverEventHandler) HandleEvent(event transport.Event) error {
 	correlationId := event.CorrelationID
 	payload := event.Payload
 	eventType := event.Type
 
 	switch eventType {
 	case "project.uploaded":
-		buildType, err := payload.GetData("buildType")
+		buildType, err := payload.Get
 		if err != nil {
 			return err
 		}

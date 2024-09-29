@@ -25,8 +25,9 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/google/uuid v1.6.0
-	github.com/hari134/comet v0.0.0-20240928192034-6c84a73b398c
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/hari134/comet v0.0.0-20240928200530-36990b2c377f
+	github.com/joho/godotenv v1.5.1
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect

@@ -1,17 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"os"
-	"time"
+	"strconv"
 
 	"github.com/docker/docker/client"
 	"github.com/hari134/comet/builder/container"
 	"github.com/hari134/comet/builder/pipeline/pipelines"
-	"github.com/hari134/comet/builder/transport"
 	"github.com/hari134/comet/core/storage"
+	"github.com/hari134/comet/core/transport"
 	"github.com/joho/godotenv"
 )
 
@@ -26,7 +24,10 @@ func main() {
 	}
 
 	// Initialize dependencies
-	capacity := os.Getenv("capacity")
+	capacity,err := strconv.Atoi(os.Getenv("capacity"))
+	if err != nil{
+		log.Fatal(err)
+	}
 	dockerClient, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		log.Fatal(err)
@@ -59,37 +60,4 @@ func main() {
 			log.Fatalf("Receiver failed to start: %v", err)
 		}
 	}()
-
-	// Prepare the sender to send an event to the receiver
-	sender := transport.RestSender{
-		Endpoint: "http://localhost:8080/",
-	}
-
-	// Create an event
-	event := transport.Event{
-		CorrelationID: "12345",
-		Type:          "project.uploaded",
-		Payload: transport.EventPayload{
-			Data: map[string]interface{}{
-				"buildType": "ReactViteBuilder",
-			},
-		},
-	}
-
-	// Send the event
-	err := sender.Send(event)
-	if err != nil {
-		log.Fatalf("Failed to send event: %v", err)
-	}
-
-	// Wait for a while before stopping the receiver
-	time.Sleep(5 * time.Second)
-
-	// Stop the receiver
-	err = receiver.StopReceiving()
-	if err != nil {
-		log.Fatalf("Failed to stop receiver: %v", err)
-	}
-
-	fmt.Println("Receiver stopped")
 }
