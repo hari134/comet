@@ -9,22 +9,21 @@ import (
 	"github.com/hari134/comet/builder/container"
 	"github.com/hari134/comet/builder/pipeline/pipelines"
 	"github.com/hari134/comet/core/storage"
-	"github.com/hari134/comet/core/transport"
+	"github.com/hari134/comet/builder/transport"
 	"github.com/joho/godotenv"
 )
 
-func init() {
-	pipelines.InitializePipelines()
-}
 
 func main() {
+	pipelines.InitializePipelines()
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
 	// Initialize dependencies
-	capacity,err := strconv.Atoi(os.Getenv("capacity"))
+	capacity,err := strconv.Atoi(os.Getenv("CONTAINER_CONCURRENCY"))
 	if err != nil{
 		log.Fatal(err)
 	}
@@ -38,7 +37,6 @@ func main() {
 	awsCreds := storage.AWSCredentials{
 		AccessKey:       os.Getenv("AWS_ACCESS_KEY_ID"),
 		SecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		BucketName:      os.Getenv("AWS_BUCKET_NAME"),
 		Region:          os.Getenv("AWS_REGION"),
 	}
 	store ,err:= storage.NewS3Store(awsCreds)
@@ -55,7 +53,7 @@ func main() {
 
 	go func() {
 		log.Println("Starting receiver on port 8080...")
-		err := receiver.StartReceiving(eventHandler, transport.Event{})
+		err := receiver.StartReceiving(eventHandler)
 		if err != nil {
 			log.Fatalf("Receiver failed to start: %v", err)
 		}

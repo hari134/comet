@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/hari134/comet/builder/transport"
+	"github.com/hari134/comet/core/transport"
 )
 
 type StreamManager struct{

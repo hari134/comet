@@ -69,7 +69,7 @@ func NewTransportError(message string, err error) error {
 // Receiver defines the behavior for receiving and processing incoming events.
 type Receiver interface {
 	// StartReceiving listens for events and executes the callback for each incoming event.
-	StartReceiving(eventHandler EventHandler,event Event) error
+	StartReceiving(eventHandler EventHandler) error
 }
 
 // Sender defines the behavior for sending events to another system.

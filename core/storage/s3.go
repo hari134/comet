@@ -14,18 +14,16 @@ import (
 type AWSCredentials struct {
 	AccessKey       string
 	SecretAccessKey string
-	BucketName      string
 	Region          string
 }
 
 type S3Store struct {
 	client *s3.S3
-	bucket string
 }
 
-func (s3Store S3Store) Get(ctx context.Context,key string) ([]byte, error) {
+func (s3Store S3Store) Get(ctx context.Context,bucket,key string) ([]byte, error) {
 	resp, err := s3Store.client.GetObject(&s3.GetObjectInput{
-		Bucket: aws.String(s3Store.bucket),
+		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
 
@@ -39,9 +37,9 @@ func (s3Store S3Store) Get(ctx context.Context,key string) ([]byte, error) {
 	return bytes, nil
 }
 
-func (s3Store S3Store) Put(ctx context.Context,fileData []byte, key string) error {
+func (s3Store S3Store) Put(ctx context.Context,fileData []byte,bucket, key string) error {
 	_, err := s3Store.client.PutObject(&s3.PutObjectInput{
-		Bucket: aws.String(s3Store.bucket),
+		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 		Body:   bytes.NewReader(fileData),
 	})
@@ -57,7 +55,7 @@ func NewS3Store(awsConfig AWSCredentials) (*S3Store, error) {
 		return nil, err
 	}
 	client := s3.New(sess)
-	s3Store := &S3Store{client: client, bucket: awsConfig.BucketName}
+	s3Store := &S3Store{client: client}
 	return s3Store, nil
 }
 

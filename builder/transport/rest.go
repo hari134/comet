@@ -58,7 +58,7 @@ func (r *RestReceiver) WithEndpoint(endpoint string) *RestReceiver{
 }
 
 // StartReceiving listens for incoming events on the specified endpoint and executes the provided handler.
-func (r *RestReceiver) StartReceiving(eventHandler transport.EventHandler,event transport.Event) error {
+func (r *RestReceiver) StartReceiving(eventHandler transport.EventHandler) error {
 	if r.Endpoint == "" {
 		return transport.NewTransportError("no endpoint provided for receiving events", nil)
 	}
@@ -137,7 +137,7 @@ func (rh *RestReceiverEventHandler) HandleEvent(event transport.Event) error {
 
 	switch eventType {
 	case "project.uploaded":
-		buildType, err := payload.Get
+		buildType, err := payload.GetData("BuildEnvType")
 		if err != nil {
 			return err
 		}
