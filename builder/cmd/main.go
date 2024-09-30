@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// Start the receiver in a goroutine
-	receiver := transport.NewRestReceiver().WithEndpoint(":8080")
+	receiver := transport.NewRestReceiver().WithEndpoint("127.0.0.1:8080")
 
 	eventHandler := transport.NewRestReceiverEventHandler().
 		WithContainerManager(containerManager).
@@ -58,4 +58,5 @@ func main() {
 			log.Fatalf("Receiver failed to start: %v", err)
 		}
 	}()
+	select{}
 }

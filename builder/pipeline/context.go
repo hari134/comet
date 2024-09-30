@@ -25,15 +25,22 @@ func NewPipelineContext() *PipelineContext {
 	}
 }
 
-func (pipeline *PipelineContext) WithContainer(buildContainer container.BuildContainer) *PipelineContext {
-	pipeline.container = buildContainer
-	return pipeline
+func (ctx *PipelineContext) WithContainer(buildContainer container.BuildContainer) *PipelineContext {
+	ctx.container = buildContainer
+	return ctx
 }
 
 
-func (pipeline *PipelineContext) WithStore(store storage.Store) *PipelineContext {
-	pipeline.store= store
-	return pipeline
+func (ctx *PipelineContext) WithStore(store storage.Store) *PipelineContext {
+	ctx.store= store
+	return ctx
+}
+
+func (ctx *PipelineContext) GetStore() (storage.Store,error) {
+	if ctx.store == nil {
+		return nil, errors.New("store not set in pipeline context")
+	}
+	return ctx.store, nil
 }
 
 func (pipeline *PipelineContext) WithProjectTarFile(tarFile *bytes.Buffer) *PipelineContext {

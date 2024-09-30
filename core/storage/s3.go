@@ -21,23 +21,28 @@ type S3Store struct {
 	client *s3.S3
 }
 
-func (s3Store S3Store) Get(ctx context.Context,bucket,key string) ([]byte, error) {
+func (s3Store S3Store) Get(ctx context.Context, bucket string, key string) (*bytes.Buffer, error) {
 	resp, err := s3Store.client.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
+	if err != nil {
+		return nil, err
+	}
+	// Ensure the response body is closed after reading
+	defer resp.Body.Close()
 
+	// Read the object body into a byte slice
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	bytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	return bytes, nil
+	buffer := bytes.NewBuffer(data)
+
+	return buffer, nil
 }
 
-func (s3Store S3Store) Put(ctx context.Context,fileData []byte,bucket, key string) error {
+func (s3Store S3Store) Put(ctx context.Context, fileData []byte, bucket, key string) error {
 	_, err := s3Store.client.PutObject(&s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
@@ -74,4 +79,3 @@ func newAwsSession(config AWSCredentials) (*session.Session, error) {
 	}
 	return sess, nil
 }
-

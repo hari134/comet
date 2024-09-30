@@ -63,7 +63,7 @@ func (r *RestReceiver) StartReceiving(eventHandler transport.EventHandler) error
 		return transport.NewTransportError("no endpoint provided for receiving events", nil)
 	}
 
-	http.HandleFunc(r.Endpoint, func(w http.ResponseWriter, req *http.Request) {
+	http.HandleFunc("/api/event/", func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != http.MethodPost {
 			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 			return
