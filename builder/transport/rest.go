@@ -10,7 +10,6 @@ import (
 
 	"github.com/hari134/comet/builder/container"
 	"github.com/hari134/comet/builder/pipeline"
-	"github.com/hari134/comet/builder/pipeline/pipelines"
 	"github.com/hari134/comet/core/storage"
 	"github.com/hari134/comet/core/transport"
 )

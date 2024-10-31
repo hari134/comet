@@ -42,11 +42,11 @@ func (s3Store S3Store) Get(ctx context.Context, bucket string, key string) (*byt
 	return buffer, nil
 }
 
-func (s3Store S3Store) Put(ctx context.Context, fileData []byte, bucket, key string) error {
+func (s3Store S3Store) Put(ctx context.Context, fileData *bytes.Buffer, bucket, key string) error {
 	_, err := s3Store.client.PutObject(&s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
-		Body:   bytes.NewReader(fileData),
+		Body:   bytes.NewReader(fileData.Bytes()),
 	})
 	if err != nil {
 		return err

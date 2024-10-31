@@ -1,8 +1,7 @@
-package pipelines
+package util
 
 import (
 	"context"
-	"errors"
 
 	"github.com/hari134/comet/builder/pipeline"
 	"github.com/hari134/comet/builder/util"
@@ -34,9 +33,22 @@ func pullProjectFromStore(ctx *pipeline.PipelineContext) error{
 	if err != nil{
 		return err
 	}
-	projectTarFile , err := store.Get(context.Background(),projectStorageKey)
-	
+	projectStorageBucketRaw ,err := ctx.Get("projectStorageBucket")
+	if err != nil{
+		return err
+	}
+	projectStorageBucket,err := util.TypeAssert[string](projectStorageBucketRaw,"string")
+	if err != nil{
+		return err
+	}
+	projectTarFile , err := store.Get(context.Background(),projectStorageBucket,projectStorageKey)
+	if err != nil{
+		return err
+	}
+	ctx.SetProjectTarFile(projectTarFile)
+	return nil
 }
+
 func copyDistFromContainer(ctx *pipeline.PipelineContext) error {
 	buildContainer, err := ctx.GetContainer()
 	if err != nil {

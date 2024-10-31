@@ -43,9 +43,8 @@ func (ctx *PipelineContext) GetStore() (storage.Store,error) {
 	return ctx.store, nil
 }
 
-func (pipeline *PipelineContext) WithProjectTarFile(tarFile *bytes.Buffer) *PipelineContext {
+func (pipeline *PipelineContext) SetProjectTarFile(tarFile *bytes.Buffer) {
 	pipeline.projectTarFile = tarFile
-	return pipeline
 }
 
 func (ctx *PipelineContext) GetContainer() (container.BuildContainer, error) {

@@ -1,0 +1,83 @@
+services:
+  builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: builder
+    env_file:
+      - ./builder/.env
+    depends_on:
+      - comet_db
+    networks:
+      - backend
+    restart: always
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: server
+    container_name: server
+    env_file:
+      - ./server/.env
+    depends_on:
+      - comet_db
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+    restart: always
+
+
+  comet_db:
+    image: postgres:13
+    container_name: comet-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: comet_db
+    ports:
+      - "5432:5432"
+    restart: always
+    volumes:
+      - comet_db_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+    networks:
+      - backend
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CFG_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    networks:
+      - backend
+
+volumes:
+  userservice_db_data:
+  productservice_db_data:
+  orderservice_db_data:
+
+networks:
+  backend:
+    driver: bridge
