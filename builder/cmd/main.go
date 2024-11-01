@@ -7,7 +7,6 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/hari134/comet/builder/container"
-	"github.com/hari134/comet/builder/pipeline/pipelines"
 	"github.com/hari134/comet/core/storage"
 	"github.com/hari134/comet/builder/transport"
 	"github.com/joho/godotenv"
@@ -15,7 +14,6 @@ import (
 
 
 func main() {
-	pipelines.InitializePipelines()
 
 	err := godotenv.Load()
 	if err != nil {

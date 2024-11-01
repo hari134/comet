@@ -47,11 +47,11 @@ type RestReceiver struct {
 	server   *http.Server // HTTP server for handling incoming requests
 }
 
-func NewRestReceiver() *RestReceiver{
+func NewRestReceiver() *RestReceiver {
 	return &RestReceiver{}
 }
 
-func (r *RestReceiver) WithEndpoint(endpoint string) *RestReceiver{
+func (r *RestReceiver) WithEndpoint(endpoint string) *RestReceiver {
 	r.Endpoint = endpoint
 	return r
 }
@@ -112,25 +112,26 @@ func (r *RestReceiver) StopReceiving() error {
 
 type RestReceiverEventHandler struct {
 	containerManager container.ContainerManager
-	store storage.Store
+	store            storage.Store
+	pipelineFactory  pipeline.PipelineFactory
 }
 
 func NewRestReceiverEventHandler() *RestReceiverEventHandler {
 	return &RestReceiverEventHandler{}
 }
 
-func (restReceiverEH *RestReceiverEventHandler) WithContainerManager(containerManager container.ContainerManager) *RestReceiverEventHandler{
+func (restReceiverEH *RestReceiverEventHandler) WithContainerManager(containerManager container.ContainerManager) *RestReceiverEventHandler {
 	restReceiverEH.containerManager = containerManager
 	return restReceiverEH
 }
 
-func (restReceiverEH *RestReceiverEventHandler) WithStorage(store storage.Store) *RestReceiverEventHandler{
+func (restReceiverEH *RestReceiverEventHandler) WithStorage(store storage.Store) *RestReceiverEventHandler {
 	restReceiverEH.store = store
 	return restReceiverEH
 }
 
 func (rh *RestReceiverEventHandler) HandleEvent(event transport.Event) error {
-	correlationId := event.CorrelationID
+	_ = event.CorrelationID
 	payload := event.Payload
 	eventType := event.Type
 
@@ -140,8 +141,12 @@ func (rh *RestReceiverEventHandler) HandleEvent(event transport.Event) error {
 		if err != nil {
 			return err
 		}
-
-		buildPipeline, err := pipelines.PipelineFactory(buildType.(string))
+		var buildTypeStr string
+		buildTypeStr, ok := buildType.(string)
+		if !ok {
+			return errors.New(fmt.Sprintf("buildType : %v not of type string", buildType))
+		}
+		buildPipeline, err := rh.pipelineFactory.Get(buildTypeStr)
 		if err != nil {
 			return err
 		}
@@ -150,11 +155,15 @@ func (rh *RestReceiverEventHandler) HandleEvent(event transport.Event) error {
 		if err != nil {
 			return err
 		}
+		depManager := pipeline.NewDefaultDependencyManager().
+			AddDependency(func() container.BuildContainer {
+				return buildContainer
+			})
+		depManager.AddDependency(func() container.BuildContainer {
+			return buildContainer
+		})
 
-		ctx := pipeline.NewPipelineContext().WithContainer(buildContainer)
-		ctx.Set("correlationId", correlationId)
-
-		err = buildPipeline.Run(ctx)
+		err = buildPipeline.Run(depManager)
 		if err != nil {
 			return err
 		}

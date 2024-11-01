@@ -1,49 +1,48 @@
 package pipeline
 
-// Pipeline interface defines function signatures for a build pipeline.
-// The build pipeline will take a container instance to execute for all stages.
+import (
+	"fmt"
+)
+
+/* Pipeline is a interface which defines functions:
+ Run() - Runs the functions in pipeline stages
+ AddDependency(constructor) - Takes a contructor function that returns the dependency
+ AddStage(function) - Takes a function with the necessary dependencies as arguments in the function which is injected by any
+ DI framework like dig. The function can return any error which is returned as is, this is useful to return at any point in the stage.
+
+ Note : For simplicity this assumes that only a single instance exists for a dependency of a given type. If multiple dependencies exists
+			  of same type exist then wrap then in structs of different types.
+*/
 type Pipeline interface {
-	Run(ctx *PipelineContext) error
-	AddStage(stage Stage) Pipeline
+    AddStage(stage Stage) Pipeline
+    Run(depManager DependencyManager) error
 }
 
-type SerialPipeline struct {
-	stages []Stage
+
+type pipelineImpl struct {
+    stages []Stage
 }
 
-// NewSerialPipeline creates a new SerialPipeline instance.
-func NewSerialPipeline() Pipeline {
-	return &SerialPipeline{
-		stages: []Stage{},
-	}
+// NewPipeline creates a new pipeline instance.
+func NewPipeline() Pipeline {
+    return &pipelineImpl{}
 }
 
-// AddStage adds a stage to the serial pipeline and returns the pipeline for chaining.
-func (pipeline *SerialPipeline) AddStage(stage Stage) Pipeline{
-	pipeline.stages = append(pipeline.stages, stage)
-	return pipeline
+// AddStage adds a stage to the pipeline.
+func (p *pipelineImpl) AddStage(st Stage) Pipeline {
+    p.stages = append(p.stages, st)
+    return p
 }
 
-// Run executes all stages in sequence. If a stage fails, the execution stops.
-func (pipeline *SerialPipeline) Run(ctx *PipelineContext) error {
-	for _, stage := range pipeline.stages {
-		if err := stage.Execute(ctx); err != nil {
-			return err
-		}
-	}
-
-	// Cleanup the container after all stages are executed
-	container, err := ctx.GetContainer()
-	if err != nil{
-		return err
-	}
-
-	if err := container.Stop(); err != nil {
-		return err
-	}
-	if err := container.Remove(); err != nil {
-		return err
-	}
-
-	return nil
+// Run executes all stages in the pipeline using the dependency manager.
+func (p *pipelineImpl) Run(depManager DependencyManager) error {
+    for _, st := range p.stages {
+        fmt.Printf("Running stage: %s\n", st.Name)
+        err := st.Execute(depManager)
+        if err != nil {
+            fmt.Printf("Error in stage %s: %v\n", st.Name, err)
+            return err
+        }
+    }
+    return nil
 }
