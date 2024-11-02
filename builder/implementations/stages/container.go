@@ -1,10 +1,10 @@
 package stages
 
 import (
-	"bytes"
 	"log/slog"
 
 	"github.com/hari134/comet/builder/container"
+	"github.com/hari134/comet/builder/dto"
 	"github.com/hari134/comet/builder/pipeline"
 )
 
@@ -14,16 +14,16 @@ func CopyProjectFilesToContainer() pipeline.Stage {
 		Name: "Copy Project Files to Container",
 		Execute: func(dm pipeline.DependencyManager) error {
 			var buildContainer container.BuildContainer
-			var projectTarFile *bytes.Buffer
-			err := dm.Invoke(func(bc container.BuildContainer,pf *bytes.Buffer) {
+			var projectTarFileData dto.ProjectFileData
+			err := dm.Invoke(func(bc container.BuildContainer,pf dto.ProjectFileData) {
 				buildContainer = bc
-				projectTarFile = pf
+				projectTarFileData = pf
 			})
 			if err != nil {
 				return err
 			}
 
-			buildContainer.CopyToContainer(projectTarFile, "/app")
+			buildContainer.CopyToContainer(projectTarFileData.ProjectTarFile, projectTarFileData.DirName)
 			slog.Debug("Files copied successfully")
 			return nil
 		},
