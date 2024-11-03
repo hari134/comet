@@ -8,9 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/hari134/comet/builder/container"
-	"github.com/hari134/comet/builder/pipeline"
-	"github.com/hari134/comet/core/storage"
+	"github.com/hari134/comet/builder/service"
 	"github.com/hari134/comet/core/transport"
 )
 
@@ -111,23 +109,11 @@ func (r *RestReceiver) StopReceiving() error {
 }
 
 type RestReceiverEventHandler struct {
-	containerManager container.ContainerManager
-	store            storage.Store
-	pipelineFactory  pipeline.PipelineFactory
+	BuilderService service.BuilderService
 }
 
 func NewRestReceiverEventHandler() *RestReceiverEventHandler {
 	return &RestReceiverEventHandler{}
-}
-
-func (restReceiverEH *RestReceiverEventHandler) WithContainerManager(containerManager container.ContainerManager) *RestReceiverEventHandler {
-	restReceiverEH.containerManager = containerManager
-	return restReceiverEH
-}
-
-func (restReceiverEH *RestReceiverEventHandler) WithStorage(store storage.Store) *RestReceiverEventHandler {
-	restReceiverEH.store = store
-	return restReceiverEH
 }
 
 func (rh *RestReceiverEventHandler) HandleEvent(event transport.Event) error {
@@ -141,32 +127,19 @@ func (rh *RestReceiverEventHandler) HandleEvent(event transport.Event) error {
 		if err != nil {
 			return err
 		}
-		var buildTypeStr string
-		buildTypeStr, ok := buildType.(string)
+		buildEnvTypeStr, ok := buildType.(string)
 		if !ok {
-			return errors.New(fmt.Sprintf("buildType : %v not of type string", buildType))
+			return fmt.Errorf("buildType : %v not of type string", buildType)
 		}
-		buildPipeline, err := rh.pipelineFactory.Get(buildTypeStr)
-		if err != nil {
-			return err
+		projectStorageKeyStr, ok := buildType.(string)
+		if !ok {
+			return fmt.Errorf("projectStorageKeyStr : %v not of type string", buildType)
 		}
-
-		buildContainer, err := rh.containerManager.NewBuildContainer(buildType.(string))
-		if err != nil {
-			return err
+		projectStorageBucketStr, ok := buildType.(string)
+		if !ok {
+			return fmt.Errorf("projectStorageBucketStr : %v not of type string", buildType)
 		}
-		depManager := pipeline.NewDefaultDependencyManager().
-			AddDependency(func() container.BuildContainer {
-				return buildContainer
-			})
-		depManager.AddDependency(func() container.BuildContainer {
-			return buildContainer
-		})
-
-		err = buildPipeline.Run(depManager)
-		if err != nil {
-			return err
-		}
+		rh.BuilderService.DeployProject(projectStorageKeyStr,projectStorageBucketStr,buildEnvTypeStr)
 		return nil
 	default:
 		return errors.New("invalid event type")
