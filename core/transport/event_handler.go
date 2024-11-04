@@ -1,5 +1,5 @@
 package transport
 
-type EventHandler interface{
+type EventHandler interface {
 	HandleEvent(event Event) error
 }

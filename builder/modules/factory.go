@@ -16,10 +16,6 @@ type DefaultPipelineFactory struct {
 	registry map[string]pipeline.Pipeline
 }
 
-func (pf *DefaultPipelineFactory) Register(name string ,pipeline pipeline.Pipeline){
-	pf.registry[name] = pipeline
-}
-
 func (pf *DefaultPipelineFactory) Get(name string ) (pipeline.Pipeline, error){
 	pipeline, ok := pf.registry[name]
 	if !ok{

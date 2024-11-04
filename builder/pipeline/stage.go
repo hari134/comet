@@ -1,5 +1,6 @@
 package pipeline
 
+// TODO add timeout or deadline for each stage and break with error
 
 type Stage struct {
     Name     string

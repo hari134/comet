@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/hari134/comet/migration"
 	"github.com/hari134/comet/core/db"
+	"github.com/hari134/comet/migration"
 	"github.com/uptrace/bun/extra/bundebug"
 	"log"
 )

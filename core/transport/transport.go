@@ -38,7 +38,7 @@ func (p Payload) GetData(key string) (interface{}, error) {
 	return val, nil
 }
 
-func NewEvent(eventType string,correlationID CorrelationID, payload Payload) Event {
+func NewEvent(eventType string, correlationID CorrelationID, payload Payload) Event {
 	return Event{
 		eventType,
 		correlationID,

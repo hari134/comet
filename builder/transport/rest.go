@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/hari134/comet/builder/service"
+	"github.com/hari134/comet/builder"
 	"github.com/hari134/comet/core/transport"
 )
 
@@ -109,11 +109,17 @@ func (r *RestReceiver) StopReceiving() error {
 }
 
 type RestReceiverEventHandler struct {
-	BuilderService service.BuilderService
+	BuilderService *builder.Builder
 }
 
 func NewRestReceiverEventHandler() *RestReceiverEventHandler {
 	return &RestReceiverEventHandler{}
+}
+
+
+func (rh *RestReceiverEventHandler) WithBuilder(builder *builder.Builder) *RestReceiverEventHandler{
+	rh.BuilderService = builder
+	return rh
 }
 
 func (rh *RestReceiverEventHandler) HandleEvent(event transport.Event) error {

@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -12,9 +13,40 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/hari134/comet/builder/relay"
 )
 
 type Image string
+
+type DockerExecOptions struct {
+	cmd           string
+	streamOptions DockerStreamOptions
+}
+
+type DockerStreamOptions struct {
+	IsStreamingEnabled bool
+	Channel            chan relay.StreamData
+}
+
+func DefaultDockerExecOptions() *DockerExecOptions {
+	return &DockerExecOptions{}
+}
+
+func (dockerExecOptions *DockerExecOptions) IsStreamingEnabled() bool {
+	return dockerExecOptions.streamOptions.IsStreamingEnabled
+}
+
+func (dockerExecOptions *DockerExecOptions) WithCommand(cmd string) *DockerExecOptions {
+	dockerExecOptions.cmd = cmd
+	return dockerExecOptions
+}
+
+func (dockerExecOptions *DockerExecOptions) WithStreamOptions(opts DockerStreamOptions) (*DockerExecOptions, error) {
+	if opts.IsStreamingEnabled && opts.Channel == nil {
+		return nil, errors.New("stream is enabled but no data channel is provided")
+	}
+	return dockerExecOptions, nil
+}
 
 // Implements the BuildContainer interface
 type DockerBuildContainer struct {
@@ -87,10 +119,13 @@ func (c *DockerBuildContainer) Remove() error {
 	return c.client.ContainerRemove(context.Background(), c.id, container.RemoveOptions{})
 }
 
-
-func (c *DockerBuildContainer) ExecCmd(cmd string) (string, error) {
+func (c *DockerBuildContainer) ExecCmd(opts ExecOptions) (string, error) {
+	execOpts, ok := opts.(*DockerExecOptions)
+	if !ok {
+		return "", errors.New("invalid docker exec config")
+	}
 	execResp, err := c.client.ContainerExecCreate(context.Background(), c.id, types.ExecConfig{
-		Cmd:          []string{"sh", "-c", cmd},
+		Cmd:          []string{"sh", "-c", execOpts.cmd},
 		AttachStdout: true,
 		AttachStderr: true,
 	})
@@ -105,8 +140,26 @@ func (c *DockerBuildContainer) ExecCmd(cmd string) (string, error) {
 	defer execAttachResp.Close()
 
 	var outputBuf bytes.Buffer
-	if _, err := io.Copy(&outputBuf, execAttachResp.Reader); err != nil {
-		return "", err
+
+	buffer := make([]byte, 4096)
+	for {
+		n, err := execAttachResp.Reader.Read(buffer)
+		if n > 0 {
+			outputBuf.Write(buffer[:n])
+
+			if opts.IsStreamingEnabled() {
+				logData := relay.DockerLogData{
+					Data: string(buffer[:n]),
+				}
+				execOpts.streamOptions.Channel <- logData
+			}
+		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return "", fmt.Errorf("error reading from log relay: %w", err)
+		}
 	}
 
 	return outputBuf.String(), nil
@@ -114,7 +167,8 @@ func (c *DockerBuildContainer) ExecCmd(cmd string) (string, error) {
 
 func (c *DockerBuildContainer) unzipFile(filePath string) (string, error) {
 	cmd := fmt.Sprintf("unzip %s -d %s", filePath, filepath.Dir(filePath))
-	return c.ExecCmd(cmd)
+	opts:= DefaultDockerExecOptions().WithCommand(cmd)
+	return c.ExecCmd(opts)
 }
 
 func (c *DockerBuildContainer) createDirectoryInContainer(directoryPath string) error {
@@ -208,7 +262,6 @@ func (c *DockerBuildContainer) writeDataToContainer(data []byte, filePath string
 	return nil
 }
 
-
 func addFileToZip(zipWriter *zip.Writer, reader io.Reader, filename string) error {
 	writer, err := zipWriter.Create(filename)
 	if err != nil {
@@ -218,4 +271,3 @@ func addFileToZip(zipWriter *zip.Writer, reader io.Reader, filename string) erro
 	_, err = io.Copy(writer, reader)
 	return err
 }
-

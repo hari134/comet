@@ -3,3 +3,6 @@ migrate:
 
 run builder:
 	go run builder/cmd/main.go
+
+format:
+	go fmt ./...

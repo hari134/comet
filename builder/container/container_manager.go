@@ -6,6 +6,7 @@ import (
 	"github.com/docker/docker/client"
 )
 
+
 type ContainerManager interface {
 	NewBuildContainer(buildType string) (BuildContainer,error)
 }

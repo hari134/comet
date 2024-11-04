@@ -5,9 +5,10 @@ import (
 )
 
 type PipelineConfig interface{
-
+    IsStreamingEnabled() bool
 }
 
+// TODO add support for streaming logs
 type Pipeline interface {
     AddStage(stage Stage) Pipeline
     Run(config PipelineConfig) error

@@ -16,11 +16,15 @@ import (
    5. Execute commands in the container
 */
 
+type ExecOptions interface{
+	IsStreamingEnabled() bool
+}
+
 type BuildContainer interface {
 	CopyToContainer(tarFile *bytes.Buffer, containerPath string) error
 	CopyFromContainer(containerPath string) (io.ReadCloser, error)
 	Start() error
 	Stop() error
 	Remove() error
-	ExecCmd(cmd string) (string, error)
+	ExecCmd(opts ExecOptions) (string, error)
 }
