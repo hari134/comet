@@ -5,13 +5,16 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/hari134/comet/builder/relay"
 )
@@ -73,23 +76,33 @@ func (c *DockerBuildContainer) WithClient(client *client.Client) *DockerBuildCon
 
 func (c *DockerBuildContainer) Create() (*DockerBuildContainer, error) {
 	ctx := context.Background()
+
+	_, _, err := c.client.ImageInspectWithRaw(ctx, string(c.image))
+	if err != nil {
+		slog.Debug("image not found locally, attempting to pull", "image", c.image)
+		_, err := c.client.ImagePull(ctx, string(c.image), image.PullOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to pull image: %v", err)
+		}
+	}
+
 	containerConfig := &container.Config{
 		Image: string(c.image),
 	}
-
 	resp, err := c.client.ContainerCreate(ctx, containerConfig, nil, nil, nil, "")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create container: %v", err)
 	}
 	c.id = resp.ID
 	return c, nil
 }
 
+
 // BuildContainer interface functions
 
 func (c *DockerBuildContainer) CopyToContainer(content *bytes.Buffer, containerPath string) error {
 	ctx := context.Background()
-	if err := c.client.CopyToContainer(ctx, c.id, "/", content, types.CopyToContainerOptions{}); err != nil {
+	if err := c.client.CopyToContainer(ctx, c.id, containerPath, content, types.CopyToContainerOptions{}); err != nil {
 		return err
 	}
 	return nil
@@ -140,30 +153,53 @@ func (c *DockerBuildContainer) ExecCmd(opts ExecOptions) (string, error) {
 	defer execAttachResp.Close()
 
 	var outputBuf bytes.Buffer
-
 	buffer := make([]byte, 4096)
-	for {
-		n, err := execAttachResp.Reader.Read(buffer)
-		if n > 0 {
-			outputBuf.Write(buffer[:n])
 
-			if opts.IsStreamingEnabled() {
-				logData := relay.DockerLogData{
-					Data: string(buffer[:n]),
-				}
-				execOpts.streamOptions.Channel <- logData
-			}
-		}
+	for {
+		// Read the 8-byte Docker header
+		header := make([]byte, 8)
+		_, err := io.ReadFull(execAttachResp.Reader, header)
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
-			return "", fmt.Errorf("error reading from log relay: %w", err)
+			return "", fmt.Errorf("error reading header: %w", err)
+		}
+
+		// Determine the stream type (stdout or stderr)
+		streamType := header[0]
+		length := int(binary.BigEndian.Uint32(header[4:]))
+
+		// Read the actual payload based on the length
+		if length > 0 {
+			n, err := execAttachResp.Reader.Read(buffer[:length])
+			if n > 0 {
+				outputBuf.Write(buffer[:n])
+
+				if opts.IsStreamingEnabled() {
+					logData := relay.DockerLogData{
+						Data: string(buffer[:n]),
+					}
+					execOpts.streamOptions.Channel <- logData
+				}
+			}
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				return "", fmt.Errorf("error reading from log relay: %w", err)
+			}
+		}
+
+		// Optional: Handle stream type if needed
+		if streamType == 2 {
+			// This is stderr, you can handle it separately if needed
 		}
 	}
 
 	return outputBuf.String(), nil
 }
+
 
 func (c *DockerBuildContainer) unzipFile(filePath string) (string, error) {
 	cmd := fmt.Sprintf("unzip %s -d %s", filePath, filepath.Dir(filePath))

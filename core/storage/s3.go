@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"log/slog"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -48,7 +49,9 @@ func (s3Store S3Store) Put(ctx context.Context, fileData *bytes.Buffer, bucket, 
 		Key:    aws.String(key),
 		Body:   bytes.NewReader(fileData.Bytes()),
 	})
+
 	if err != nil {
+		slog.Debug(err.Error())
 		return err
 	}
 	return nil

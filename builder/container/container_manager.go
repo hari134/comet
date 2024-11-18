@@ -2,6 +2,7 @@ package container
 
 import (
 	"errors"
+	"log"
 
 	"github.com/docker/docker/client"
 )
@@ -30,16 +31,28 @@ func (dcm *DockerContainerManager) WithClient(client *client.Client) *DockerCont
 	return dcm
 }
 
+func (dcm *DockerContainerManager) WithDefaultClient() *DockerContainerManager{
+	client , err := client.NewClientWithOpts()
+	if err != nil{
+		log.Fatal("Failed to initialize default client for  container manager")
+	}
+	dcm.client = client
+	return dcm
+}
+
 func (cm *DockerContainerManager) NewBuildContainer(buildType string) (BuildContainer,error) {
 	switch buildType {
-	case "ReactViteNode20":
+	case "reactvitenode20":
 		dockerContainer,err := NewDockerBuildContainer().
-			WithImage("node:20").
+			WithImage("comet-react-node20:v1.0").
 			WithClient(cm.client).
 			Create()
 
 		if err != nil{
 			return nil,err
+		}
+		if err := dockerContainer.Start(); err != nil{
+			return nil, err
 		}
 		return dockerContainer, nil
 	default:

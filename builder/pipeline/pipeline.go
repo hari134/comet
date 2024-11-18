@@ -34,7 +34,7 @@ func (p *pipeline) AddStage(st Stage) Pipeline {
 func (p *pipeline) Run(config PipelineConfig) error {
     for _, st := range p.stages {
         fmt.Printf("Running stage: %s\n", st.Name)
-        err := st.Execute(config)
+        err := st.Execute(&config)
         if err != nil {
             fmt.Printf("Error in stage %s: %v\n", st.Name, err)
             return err

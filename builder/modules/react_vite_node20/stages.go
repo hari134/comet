@@ -11,8 +11,9 @@ import (
 func PullProjectFiles() pipeline.Stage {
 	return pipeline.Stage{
 		Name: "Pull Project Files From Storage",
-		Execute: func(config pipeline.PipelineConfig) error {
-			cfg := config.(*PipelineConfig)
+		Execute: func(config *pipeline.PipelineConfig) error {
+			slog.Debug("In stage : Pull Project Files From Storage")
+			cfg := (*config).(*PipelineConfig)
 			store := cfg.Store
 			storageConfig := cfg.ProjectStorageConfig
 
@@ -23,7 +24,7 @@ func PullProjectFiles() pipeline.Stage {
 			if err != nil {
 				return err
 			}
-			cfg.ProjectFileData = ProjectFileData{ProjectTarFile: projectTarFile, DirName: "app"}
+			cfg.ProjectFileData = ProjectFileData{ProjectTarFile: projectTarFile, DirName: "/"}
 			slog.Debug("Files pulled from storage successfully")
 			return nil
 		},
@@ -34,12 +35,16 @@ func PullProjectFiles() pipeline.Stage {
 func CopyProjectFilesToContainer() pipeline.Stage {
 	return pipeline.Stage{
 		Name: "Copy Project Files to Container",
-		Execute: func(config pipeline.PipelineConfig) error {
-			cfg := config.(*PipelineConfig)
+		Execute: func(config *pipeline.PipelineConfig) error {
+			slog.Debug("In stage : Copy Project Files to Container")
+			cfg := (*config).(*PipelineConfig)
 			buildContainer := cfg.BuildContainer
 			projectTarFileData := cfg.ProjectFileData
-
-			buildContainer.CopyToContainer(projectTarFileData.ProjectTarFile, projectTarFileData.DirName)
+			err := buildContainer.CopyToContainer(projectTarFileData.ProjectTarFile, projectTarFileData.DirName)
+			if err != nil{
+				slog.Debug(err.Error())
+				return err
+			}
 			slog.Debug("Files copied successfully")
 			return nil
 		},
@@ -50,8 +55,9 @@ func CopyProjectFilesToContainer() pipeline.Stage {
 func ExtractProject() pipeline.Stage {
 	return pipeline.Stage{
 		Name: "Extract Archive",
-		Execute: func(config pipeline.PipelineConfig) error {
-			cfg := config.(*PipelineConfig)
+		Execute: func(config *pipeline.PipelineConfig) error {
+			slog.Debug("In stage : Extract Archive")
+			cfg := (*config).(*PipelineConfig)
 			buildContainer := cfg.BuildContainer
 
 			execOpts := container.DefaultDockerExecOptions().
@@ -65,10 +71,11 @@ func ExtractProject() pipeline.Stage {
 			if err != nil {
 				return err
 			}
-			_, err = buildContainer.ExecCmd(execOpts)
+			out, err := buildContainer.ExecCmd(execOpts)
 			if err != nil {
 				return err
 			}
+			slog.Debug(out)
 			slog.Debug("Extraction completed successfully.")
 			return nil
 		},
@@ -79,11 +86,12 @@ func ExtractProject() pipeline.Stage {
 func InstallNpmDependencies() pipeline.Stage {
 	return pipeline.Stage{
 		Name: "Install Dependencies",
-		Execute: func(config pipeline.PipelineConfig) error {
-			cfg := config.(*PipelineConfig)
+		Execute: func(config *pipeline.PipelineConfig) error {
+			slog.Debug("In stage : Install Dependencies")
+			cfg := (*config).(*PipelineConfig)
 			buildContainer := cfg.BuildContainer
 			execOpts := container.DefaultDockerExecOptions().
-				WithCommand("cd /app && npm install")
+				WithCommand("npm install")
 
 			execOpts, err := execOpts.WithStreamOptions(container.DockerStreamOptions{
 				IsStreamingEnabled: cfg.StreamConfig.StreamingEnabled,
@@ -93,10 +101,11 @@ func InstallNpmDependencies() pipeline.Stage {
 			if err != nil{
 				return err
 			}
-			_, err = buildContainer.ExecCmd(execOpts)
+			out, err := buildContainer.ExecCmd(execOpts)
 			if err != nil {
 				return err
 			}
+			slog.Debug(out)
 			slog.Debug("Dependencies installed successfully.")
 			return nil
 		},
@@ -107,12 +116,13 @@ func InstallNpmDependencies() pipeline.Stage {
 func NpmBuild() pipeline.Stage {
 	return pipeline.Stage{
 		Name: "Build Project",
-		Execute: func(config pipeline.PipelineConfig) error {
-			cfg := config.(*PipelineConfig)
+		Execute: func(config *pipeline.PipelineConfig) error {
+			slog.Debug("In stage : Build Project")
+			cfg := (*config).(*PipelineConfig)
 			buildContainer := cfg.BuildContainer
 
 			execOpts := container.DefaultDockerExecOptions().
-				WithCommand("cd /app && npm run build")
+				WithCommand("npm run build")
 
 			execOpts, err := execOpts.WithStreamOptions(container.DockerStreamOptions{
 				IsStreamingEnabled: cfg.StreamConfig.StreamingEnabled,
@@ -121,10 +131,11 @@ func NpmBuild() pipeline.Stage {
 			if err != nil{
 				return err
 			}
-			_, err = buildContainer.ExecCmd(execOpts)
+			out, err := buildContainer.ExecCmd(execOpts)
 			if err != nil {
 				return err
 			}
+			slog.Debug(out)
 			slog.Debug("Build completed successfully.")
 			return nil
 		},
@@ -135,11 +146,12 @@ func NpmBuild() pipeline.Stage {
 func CopyBuildFilesFromContainer() pipeline.Stage {
 	return pipeline.Stage{
 		Name: "Copy Build Files From Container",
-		Execute: func(config pipeline.PipelineConfig) error {
-			cfg := config.(*PipelineConfig)
+		Execute: func(config *pipeline.PipelineConfig) error {
+			slog.Debug("In stage : Copy Build Files From Container")
+			cfg := (*config).(*PipelineConfig)
 			buildContainer := cfg.BuildContainer
 
-			_, err := buildContainer.CopyFromContainer("/app/dist")
+			_, err := buildContainer.CopyFromContainer("/dist")
 			if err != nil {
 				return err
 			}

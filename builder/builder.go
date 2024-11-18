@@ -47,7 +47,7 @@ func (bSvc *Builder) DeployProject(projectStorageKey, projectStorageBucket, buil
 				Output: make(chan relay.StreamData,1),
 			},
 		}
-		if err := buildPipeline.Run(cfg); err != nil {
+		if err := buildPipeline.Run(&cfg); err != nil {
 			return err
 		}
 	default:

@@ -22,7 +22,7 @@ type StreamConfig struct{
 	Output chan relay.StreamData
 }
 
-func (config PipelineConfig) IsStreamingEnabled() bool{
+func (config *PipelineConfig) IsStreamingEnabled() bool{
 	return config.StreamConfig.StreamingEnabled
 }
 
