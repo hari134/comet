@@ -39,6 +39,7 @@ func main() {
 		Region:          os.Getenv("AWS_REGION"),
 	}
 	projectFilesBucketName := os.Getenv("AWS_PROJECT_FILES_BUCKET")
+	buildFilesBucketName := os.Getenv("AWS_BUILD_FILES_BUCKET")
 	s3Store, err := storage.NewS3Store(awsCreds)
 	if err != nil {
 		log.Fatal(err)
@@ -58,10 +59,12 @@ func main() {
 	// Start http server
 	app := fiber.New()
 
-	deploymentHandler := handlers.NewDeployHandler(builderService, s3Store, projectFilesBucketName)
+	deploymentHandler := handlers.NewDeployHandler(builderService, s3Store, projectFilesBucketName, buildFilesBucketName)
 
 	deploymentRoutes := app.Group("/deployments")
 	deploymentRoutes.Post("/create-deployment", deploymentHandler.CreateDeployment)
+
+	app.Get("/*", deploymentHandler.ServeSPA)
 
 	port := 8080
 	slog.Debug(fmt.Sprintf("Starting server on http://localhost:%d\n", port))

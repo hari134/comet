@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"io"
+
 	"log/slog"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 type AWSCredentials struct {
@@ -19,66 +20,60 @@ type AWSCredentials struct {
 }
 
 type S3Store struct {
-	client *s3.S3
+	client *s3.Client
 }
 
-func (s3Store S3Store) Get(ctx context.Context, bucket string, key string) (*bytes.Buffer, error) {
-	resp, err := s3Store.client.GetObject(&s3.GetObjectInput{
+// Get retrieves an object from the S3 bucket and returns it as a bytes.Buffer
+func (s3Store *S3Store) Get(ctx context.Context, bucket string, key string) (*bytes.Buffer, error) {
+	resp, err := s3Store.client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
 	if err != nil {
+		slog.Debug("Failed to retrieve object from S3", "bucket", bucket, "key", key, "error", err.Error())
 		return nil, err
 	}
-	// Ensure the response body is closed after reading
 	defer resp.Body.Close()
 
-	// Read the object body into a byte slice
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
+		slog.Debug("Failed to read object data", "bucket", bucket, "key", key, "error", err.Error())
 		return nil, err
 	}
-	buffer := bytes.NewBuffer(data)
 
-	return buffer, nil
+	return bytes.NewBuffer(data), nil
 }
 
-func (s3Store S3Store) Put(ctx context.Context, fileData *bytes.Buffer, bucket, key string) error {
-	_, err := s3Store.client.PutObject(&s3.PutObjectInput{
+// Put uploads a file to the specified S3 bucket
+func (s3Store *S3Store) Put(ctx context.Context, fileData *bytes.Buffer, bucket, key string) error {
+	_, err := s3Store.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 		Body:   bytes.NewReader(fileData.Bytes()),
 	})
 
 	if err != nil {
-		slog.Debug(err.Error())
+		slog.Debug("Failed to upload to S3", "bucket", bucket, "key", key, "error", err.Error())
 		return err
 	}
 	return nil
 }
 
+// NewS3Store initializes and returns a new S3Store instance
 func NewS3Store(awsConfig AWSCredentials) (*S3Store, error) {
-	sess, err := newAwsSession(awsConfig)
+	// Load AWS configuration with static credentials
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(awsConfig.Region),
+		config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(awsConfig.AccessKey, awsConfig.SecretAccessKey, ""),
+		),
+	)
 	if err != nil {
+		slog.Debug("Failed to load AWS configuration", "error", err.Error())
 		return nil, err
 	}
-	client := s3.New(sess)
-	s3Store := &S3Store{client: client}
-	return s3Store, nil
-}
 
-func newAwsSession(config AWSCredentials) (*session.Session, error) {
-	awsRegion := config.Region
-	accessKey := config.AccessKey
-	secretKey := config.SecretAccessKey
-
-	awsConfig := &aws.Config{
-		Region:      aws.String(awsRegion),
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
-	}
-	sess, err := session.NewSession(awsConfig)
-	if err != nil {
-		return nil, err
-	}
-	return sess, nil
+	// Create the S3 client
+	client := s3.NewFromConfig(cfg)
+	return &S3Store{client: client}, nil
 }
