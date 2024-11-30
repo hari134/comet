@@ -7,11 +7,11 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/hari134/comet/api_server/rest/handlers"
 	"github.com/hari134/comet/builder"
 	"github.com/hari134/comet/builder/container"
 	"github.com/hari134/comet/builder/modules"
 	"github.com/hari134/comet/core/storage"
-	"github.com/hari134/comet/server/rest/handlers"
 	"github.com/joho/godotenv"
 )
 
@@ -30,7 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Initialize all dependenciegos
+	// Initialize all dependencies
 
 	// Storage dependency (S3)
 	awsCreds := storage.AWSCredentials{
@@ -64,7 +64,9 @@ func main() {
 	deploymentRoutes := app.Group("/deployments")
 	deploymentRoutes.Post("/create-deployment", deploymentHandler.CreateDeployment)
 
-	app.Get("/*", deploymentHandler.ServeSPA)
+	serveHandler := handlers.NewServeHandler(s3Store, buildFilesBucketName)
+
+	app.Get("/*", serveHandler.ServeSPA)
 
 	port := 8080
 	slog.Debug(fmt.Sprintf("Starting server on http://localhost:%d\n", port))

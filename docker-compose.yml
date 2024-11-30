@@ -20,7 +20,7 @@ services:
       target: server
     container_name: server
     env_file:
-      - ./server/.env
+      - api_server/.env
     depends_on:
       - comet_db
     ports:

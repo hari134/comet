@@ -1,38 +1,36 @@
-# Stage 1: Build the Go binaries
-FROM golang:1.22 AS stage1
-
-ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-
-# Set the working directory inside the container
-WORKDIR /app
-
-# Copy the Go workspace and source code
-COPY go.work ./go.work
-COPY core ./core
-COPY go.mod ./go.mod
-COPY go.sum ./go.sum
-
-COPY builder ./builder
-COPY server ./server
-
-# Sync the Go workspace and download dependencies
-RUN go work sync && go mod download
-
-# Build the binaries for all services
-RUN go build -o /app/bin/builder ./builder/cmd
-RUN go build -o /app/bin/server ./server/cmd
-
-# Stage 2: Create a minimal image for each service
+# Stage 1: Build the binary
 FROM golang:1.22-alpine AS builder
+
+# Install git and other required tools
+RUN apk add --no-cache git
+
 WORKDIR /app
-COPY --from=stage1 /app/bin/builder .
-RUN chmod +x ./builder
 
+# Copy source code
+COPY . .
 
-CMD ["./builder"]
+# Optionally, load environment variables from a .env file
+COPY .env /app/.env
 
-FROM golang:1.22-alpine AS server
+# Build the binary
+RUN go build -o server api_server/cmd/main.go
+
+# Stage 2: Create a minimal runtime image
+FROM alpine:latest
 WORKDIR /app
-COPY --from=stage1 /app/bin/server .
-RUN chmod +x ./server
 
+# Copy the built binary
+COPY --from=builder /app/server /app/server
+
+# Copy the .env file for runtime use
+COPY .env /app/.env
+
+# Set default environment variables (can be overridden at runtime)
+ENV PORT=8080
+ENV LOG_LEVEL=info
+
+# Expose the application port
+EXPOSE 8080
+
+# Run the binary
+CMD ["./server"]

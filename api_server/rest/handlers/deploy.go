@@ -23,7 +23,12 @@ type DeployStorageConfig struct {
 	BuildFilesBucketName   string
 }
 
-func NewDeployHandler(builderService *builder.Builder, store storage.Store, projectFilesBucketName string, buildFilesBucketName string) *DeployHandler {
+func NewDeployHandler(
+	builderService *builder.Builder,
+	store storage.Store,
+	projectFilesBucketName string,
+	buildFilesBucketName string,
+) *DeployHandler {
 	return &DeployHandler{
 		builderService: builderService,
 		store:          store,
@@ -73,37 +78,4 @@ func (dh *DeployHandler) CreateDeployment(c *fiber.Ctx) error {
 		"message":        "successfully created project deployment",
 		"deployment_url": "http://" + subdomain + ".localhost:8080",
 	})
-}
-
-func (dh *DeployHandler) ServeSPA(c *fiber.Ctx) error {
-	subdomain := util.GetSubdomain(c.Hostname()) // Extract subdomain from the hostname
-	if subdomain == "" {
-		return c.Status(400).SendString("invalid subdomain")
-	}
-
-	requestedPath := c.Path()
-	if requestedPath == "/" {
-		requestedPath = "/index.html" // Default to index.html for the root path
-	}
-
-	s3Key := fmt.Sprintf("%s%s", subdomain, requestedPath)
-
-	// Fetch the file from S3
-	fileData, err := dh.store.Get(context.Background(), dh.storageConfig.BuildFilesBucketName, s3Key)
-	if err != nil {
-		// Fallback to index.html for SPA routing
-		s3Key = fmt.Sprintf("%s/index.html", subdomain)
-		fileData, err = dh.store.Get(context.Background(), dh.storageConfig.BuildFilesBucketName, s3Key)
-		if err != nil {
-			slog.Debug("File not found", "subdomain", subdomain, "path", requestedPath, "error", err.Error())
-			return c.Status(404).SendString("file not found")
-		}
-	}
-
-	// Set the appropriate Content-Type header
-	contentType := util.GetContentType(s3Key)
-	c.Set("Content-Type", contentType)
-
-	// Serve the file content
-	return c.SendStream(fileData)
 }

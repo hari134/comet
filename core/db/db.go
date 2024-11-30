@@ -2,27 +2,28 @@ package db
 
 import (
 	"context"
-	"log"
-	"os"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/joho/godotenv"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
+	"log"
 )
 
-func NewDB() *bun.DB {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+type DBOptions struct {
+	DBUser     string
+	DBPassword string
+	DBName     string
+	DBHost     string
+	DBPort     string
+}
 
-	dbUser := os.Getenv("POSTGRES_USER")
-	dbPassword := os.Getenv("POSTGRES_PASSWORD")
-	dbName := os.Getenv("POSTGRES_DB")
-	dbHost := os.Getenv("POSTGRES_HOST")
-	dbPort := os.Getenv("POSTGRES_PORT")
+func NewDB(dbOptions DBOptions) *bun.DB {
+
+	dbUser := dbOptions.DBUser
+	dbPassword := dbOptions.DBPassword
+	dbName := dbOptions.DBName
+	dbHost := dbOptions.DBHost
+	dbPort := dbOptions.DBPort
 
 	dsn := "postgres://" + dbUser + ":" + dbPassword + "@" + dbHost + ":" + dbPort + "/" + dbName
 	config, err := pgxpool.ParseConfig(dsn)
