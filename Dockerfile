@@ -1,36 +1,35 @@
-# Stage 1: Build the binary
-FROM golang:1.22-alpine AS builder
+# Build Stage
+FROM golang:1.22.1-bullseye AS builder
 
-# Install git and other required tools
-RUN apk add --no-cache git
-
+# Set the working directory
 WORKDIR /app
 
-# Copy source code
+# Copy the entire project
 COPY . .
 
-# Optionally, load environment variables from a .env file
-COPY .env /app/.env
+# Run `go mod tidy` for the main module
+RUN go mod tidy
+
+# Run `go mod tidy` for submodules
+WORKDIR /app/api_server
+RUN go mod tidy
+
+WORKDIR /app/builder
+RUN go mod tidy
 
 # Build the binary
+WORKDIR /app
 RUN go build -o server api_server/cmd/main.go
 
-# Stage 2: Create a minimal runtime image
-FROM alpine:latest
-WORKDIR /app
+# Runtime Stage
+FROM debian:bullseye-slim
 
-# Copy the built binary
-COPY --from=builder /app/server /app/server
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+# Copy the binary from the builder stage
+COPY --from=builder /app/server .
 
-# Copy the .env file for runtime use
-COPY .env /app/.env
-
-# Set default environment variables (can be overridden at runtime)
-ENV PORT=8080
-ENV LOG_LEVEL=info
-
-# Expose the application port
+# Expose the application's port
 EXPOSE 8080
 
-# Run the binary
+# Command to run the binary
 CMD ["./server"]

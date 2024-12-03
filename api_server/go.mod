@@ -6,7 +6,6 @@ require (
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/hari134/comet v0.0.0-20240930192818-0862ecb15113
-	github.com/hari134/comet/api_server v0.0.0-00010101000000-000000000000
 	github.com/hari134/comet/builder v0.0.0-00010101000000-000000000000
 	github.com/joho/godotenv v1.5.1
 )
@@ -68,3 +67,7 @@ require (
 	google.golang.org/protobuf v1.35.1 // indirect
 )
 
+replace (
+	github.com/hari134/comet => ..
+	github.com/hari134/comet/builder => ../builder
+)

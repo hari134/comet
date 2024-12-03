@@ -73,3 +73,7 @@ require (
 	golang.org/x/sys v0.25.0 // indirect
 	google.golang.org/api v0.198.0
 )
+
+replace (
+	github.com/hari134/comet => .
+)
