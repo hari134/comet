@@ -12,7 +12,6 @@ import (
 	"github.com/hari134/comet/builder/container"
 	"github.com/hari134/comet/builder/modules"
 	"github.com/hari134/comet/core/storage"
-	"github.com/joho/godotenv"
 )
 
 func initLogger(level slog.Level) {
@@ -26,9 +25,9 @@ func initLogger(level slog.Level) {
 func main() {
 	initLogger(slog.LevelDebug)
 
-	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
-	}
+	//if err := godotenv.Load(); err != nil {
+	//	log.Fatal(err)
+	//}
 
 	// Initialize all dependencies
 
@@ -65,6 +64,14 @@ func main() {
 	deploymentRoutes.Post("/create-deployment", deploymentHandler.CreateDeployment)
 
 	serveHandler := handlers.NewServeHandler(s3Store, buildFilesBucketName)
+
+	app.Get("/test", func(c *fiber.Ctx) error {
+		err := c.SendString("ok")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 
 	app.Get("/*", serveHandler.ServeSPA)
 

@@ -27,6 +27,7 @@ FROM debian:bullseye-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 # Copy the binary from the builder stage
 COPY --from=builder /app/server .
+RUN chmod +x ./server
 
 # Expose the application's port
 EXPOSE 8080

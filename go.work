@@ -3,3 +3,4 @@ go 1.22.1
 use .
 use ./api_server
 use ./builder
+use ./static_server

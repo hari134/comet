@@ -13,9 +13,9 @@ import (
 )
 
 type DeployHandler struct {
-	builderService *builder.Builder
-	store          storage.Store
-	storageConfig  DeployStorageConfig
+	builderService      *builder.Builder
+	store               storage.Store
+	deployStorageConfig DeployStorageConfig
 }
 
 type DeployStorageConfig struct {
@@ -32,7 +32,7 @@ func NewDeployHandler(
 	return &DeployHandler{
 		builderService: builderService,
 		store:          store,
-		storageConfig: DeployStorageConfig{
+		deployStorageConfig: DeployStorageConfig{
 			ProjectFilesBucketName: projectFilesBucketName,
 			BuildFilesBucketName:   buildFilesBucketName,
 		},
@@ -47,7 +47,7 @@ func (dh *DeployHandler) CreateDeployment(c *fiber.Ctx) error {
 	subdomain := util.GetRandomName()
 	projectName := subdomain + ".tar"
 	slog.Debug(fmt.Sprintf("deployment started for project : %s", projectName))
-	err = dh.store.Put(context.Background(), projectTarFile, dh.storageConfig.ProjectFilesBucketName, projectName)
+	err = dh.store.Put(context.Background(), projectTarFile, dh.deployStorageConfig.ProjectFilesBucketName, projectName)
 	if err != nil {
 		slog.Debug(err.Error())
 		return c.Status(400).SendString("error uploading project tar file")
@@ -62,8 +62,8 @@ func (dh *DeployHandler) CreateDeployment(c *fiber.Ctx) error {
 
 	projectDeploymentConfig := builder.ProjectDeploymentConfig{
 		ProjectStorageKey:    projectName,
-		ProjectStorageBucket: dh.storageConfig.ProjectFilesBucketName,
-		BuildFilesBucket:     dh.storageConfig.BuildFilesBucketName,
+		ProjectStorageBucket: dh.deployStorageConfig.ProjectFilesBucketName,
+		BuildFilesBucket:     dh.deployStorageConfig.BuildFilesBucketName,
 		BuildEnvType:         projectBuildType,
 		OriginDomain:         "cometinfra.live",
 		SubDomain:            subdomain,
